@@ -3,877 +3,545 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>픽앤플레이 (Pick & Play) - 어르신 맞춤 카드 게임</title>
-    <!-- Tailwind CSS -->
+    <title>ZEP 스타일 멀티플레이어 재난 대피 게임</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Canvas Confetti -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <style>
-        * {
-            font-family: 'Gowun Dodum', 'Noto Sans KR', sans-serif;
+        body {
+            font-family: 'Jua', sans-serif;
+            background-color: #0f172a;
             user-select: none;
-            -webkit-user-select: none;
+            touch-action: none;
         }
-
-        /* 3D Card Flip Animation Styling */
-        .perspective-1000 {
-            perspective: 1000px;
-        }
-        
-        .card-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform-style: preserve-3d;
-        }
-
-        .card.flipped .card-inner {
-            transform: rotateY(180deg);
-        }
-
-        .card-front, .card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-            border-radius: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        .card-back {
-            transform: rotateY(180deg);
-        }
-
-        /* Hover interaction practice effect for seniors */
-        .card-hover-effect:hover {
-            transform: scale(1.06);
-            box-shadow: 0 0 25px rgba(255, 140, 0, 0.6);
-            border-color: #FF8C00;
-        }
-
-        /* Mouse highlight circle helper */
-        #mouse-guide {
-            position: fixed;
-            pointer-events: none;
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(255, 140, 0, 0.8);
-            background-color: rgba(255, 215, 0, 0.2);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 9999;
-            transition: width 0.1s, height 0.1s, opacity 0.2s;
-            display: none;
-        }
-
-        /* Pulse animation for active highlights */
-        @keyframes custom-pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        .animate-friendly-pulse {
-            animation: custom-pulse 2s infinite ease-in-out;
-        }
-
-        /* Large custom scrollbars */
-        ::-webkit-scrollbar {
-            width: 14px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #FFF8E7;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #FF8C00;
-            border-radius: 7px;
-        }
-
-        /* High contrast mode styling toggle */
-        body.high-contrast {
-            background-color: #121212 !important;
-            color: #FFFFFF !important;
-        }
-        body.high-contrast .bg-card-bg {
-            background-color: #1E1E1E !important;
-            border-color: #FFD700 !important;
+        canvas {
+            image-rendering: pixelated;
         }
     </style>
 </head>
-<body class="bg-[#FFF8E7] text-gray-800 min-h-screen flex flex-col justify-between transition-colors duration-300">
+<body class="flex flex-col items-center justify-center min-h-screen text-white p-2">
 
-    <!-- Mouse Position Helper Ring -->
-    <div id="mouse-guide"></div>
-
-    <!-- Top Navigation & Senior Accessibility Bar -->
-    <header class="bg-[#2E8B57] text-white shadow-lg sticky top-0 z-40 px-4 py-3 border-b-4 border-green-800">
-        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
-            <!-- App Logo / Title -->
-            <button onclick="showScreen('main')" class="flex items-center gap-3 text-left focus:outline-none focus:ring-4 focus:ring-yellow-300 rounded-xl p-1">
-                <div class="w-12 h-12 bg-amber-400 text-green-900 rounded-2xl flex items-center justify-center text-2xl font-black shadow-md">
-                    <i class="fa-solid fa-shapes"></i>
-                </div>
-                <div>
-                    <h1 class="text-2xl sm:text-3xl font-black tracking-wide">픽앤플레이</h1>
-                    <p class="text-xs sm:text-sm text-green-100 font-bold">어르신을 위한 즐거운 카드 맞추기</p>
-                </div>
-            </button>
-
-            <!-- Accessibility Helper Controls -->
-            <div class="flex items-center flex-wrap gap-2">
-                <!-- Mouse Highlight Ring Toggle -->
-                <button id="toggle-mouse-guide-btn" onclick="toggleMouseGuide()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 px-3 rounded-xl border-2 border-emerald-400 flex items-center gap-2 text-sm sm:text-base transition shadow active:scale-95">
-                    <i class="fa-solid fa-arrow-pointer text-amber-300"></i>
-                    <span>마우스 위치 표시</span>
-                </button>
-
-                <!-- Audio Toggle -->
-                <button id="toggle-sound-btn" onclick="toggleSound()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 px-3 rounded-xl border-2 border-emerald-400 flex items-center gap-2 text-sm sm:text-base transition shadow active:scale-95">
-                    <i class="fa-solid fa-volume-high text-amber-300" id="sound-icon"></i>
-                    <span id="sound-text">소리 켜짐</span>
-                </button>
-
-                <!-- Voice Narration Toggle -->
-                <button id="toggle-tts-btn" onclick="toggleTTS()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 px-3 rounded-xl border-2 border-emerald-400 flex items-center gap-2 text-sm sm:text-base transition shadow active:scale-95">
-                    <i class="fa-solid fa-comment-dots text-amber-300" id="tts-icon"></i>
-                    <span id="tts-text">음성 도우미 켜짐</span>
-                </button>
+    <!-- Header & Status -->
+    <div class="w-full max-w-4xl flex flex-col sm:flex-row justify-between items-center mb-4 bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-700">
+        <div class="flex items-center gap-3 mb-2 sm:mb-0">
+            <div class="bg-indigo-600 p-3 rounded-xl shadow-md text-2xl animate-pulse">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold tracking-wide text-indigo-400">ZEP 스타일 멀티 재난 훈련</h1>
+                <p class="text-xs text-slate-400">QR코드를 찍어 스마트폰으로 함께 접속하세요!</p>
             </div>
         </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="max-w-6xl w-full mx-auto p-4 sm:p-6 flex-grow flex flex-col justify-center">
-
-        <!-- SCREEN 1: Main Menu / Theme & Level Selection -->
-        <section id="screen-main" class="space-y-8 animate-fade-in">
-            <!-- Welcome Banner -->
-            <div class="bg-amber-100 border-4 border-amber-300 rounded-3xl p-6 text-center shadow-md">
-                <h2 class="text-2xl sm:text-4xl font-black text-amber-900 mb-2">
-                    👋 반갑습니다! 마우스로 카드를 선택해 보세요
-                </h2>
-                <p class="text-lg sm:text-xl text-amber-800 font-bold">
-                    좋아하는 그림 주제와 단계를 고른 후 <span class="text-orange-600 underline underline-offset-4">[게임 시작]</span> 버튼을 누르세요.
-                </p>
+        <div class="flex gap-3 items-center flex-wrap">
+            <button onclick="openQRModal()" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-xl text-xs font-bold shadow-lg transition-all flex items-center gap-1.5 active:scale-95">
+                <i class="fa-solid fa-qrcode"></i> 스마트폰 QR 공유
+            </button>
+            <div class="bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700 text-center">
+                <span class="text-[10px] text-slate-400 block">상태</span>
+                <span id="status-display" class="text-xs font-bold text-amber-400">대피 중...</span>
             </div>
-
-            <!-- Theme Selection Section -->
-            <div class="bg-white rounded-3xl p-6 shadow-xl border-4 border-orange-200">
-                <h3 class="text-2xl sm:text-3xl font-black text-gray-800 mb-4 flex items-center gap-3">
-                    <span class="w-10 h-10 bg-orange-500 text-white rounded-xl flex items-center justify-center text-xl">1</span>
-                    마음에 드는 주제를 선택하세요
-                </h3>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="theme-grid">
-                    <!-- Themes generated dynamically via JS -->
-                </div>
+            <div class="bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700 text-center">
+                <span class="text-[10px] text-slate-400 block">접속자</span>
+                <span id="player-count-display" class="text-sm font-bold text-indigo-400">1명</span>
             </div>
-
-            <!-- Level Selection Section -->
-            <div class="bg-white rounded-3xl p-6 shadow-xl border-4 border-emerald-200">
-                <h3 class="text-2xl sm:text-3xl font-black text-gray-800 mb-4 flex items-center gap-3">
-                    <span class="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center text-xl">2</span>
-                    난이도(단계)를 선택하세요
-                </h3>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="level-grid">
-                    <!-- Levels generated dynamically via JS -->
-                </div>
-            </div>
-
-            <!-- Big Play Button -->
-            <div class="text-center pt-2">
-                <button onclick="startGame()" class="w-full sm:w-2/3 lg:w-1/2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-2xl sm:text-3xl font-black py-6 px-8 rounded-3xl shadow-2xl border-4 border-orange-300 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-4 mx-auto animate-friendly-pulse">
-                    <i class="fa-solid fa-play text-4xl"></i>
-                    <span>즐거운 게임 시작하기</span>
-                </button>
-            </div>
-        </section>
-
-        <!-- SCREEN 2: Gameplay Screen -->
-        <section id="screen-game" class="hidden space-y-6">
-            <!-- Game Top Status Bar -->
-            <div class="bg-white border-4 border-amber-300 rounded-3xl p-4 sm:p-6 shadow-lg flex flex-wrap items-center justify-between gap-4">
-                <!-- Current Game Info -->
-                <div class="flex items-center gap-3">
-                    <span id="active-theme-badge" class="bg-orange-100 text-orange-800 font-black text-lg sm:text-xl px-4 py-2 rounded-2xl border-2 border-orange-300">
-                        과일/채소
-                    </span>
-                    <span id="active-level-badge" class="bg-emerald-100 text-emerald-800 font-black text-lg sm:text-xl px-4 py-2 rounded-2xl border-2 border-emerald-300">
-                        1단계 (4장)
-                    </span>
-                </div>
-
-                <!-- Stats: Flips & Timer -->
-                <div class="flex items-center gap-6 text-xl sm:text-2xl font-black text-gray-800">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-hand-pointer text-amber-500"></i>
-                        <span>시도 횟수: <span id="flip-count" class="text-orange-600">0</span>회</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-clock text-emerald-600"></i>
-                        <span>시간: <span id="game-timer" class="text-emerald-700">0</span>초</span>
-                    </div>
-                </div>
-
-                <!-- Navigation Controls -->
-                <div class="flex items-center gap-3">
-                    <button onclick="restartGame()" class="bg-amber-500 hover:bg-amber-600 text-white font-black text-base sm:text-lg py-3 px-5 rounded-2xl shadow border-2 border-amber-300 transition flex items-center gap-2 active:scale-95">
-                        <i class="fa-solid fa-rotate-right"></i>
-                        <span>다시 시작</span>
-                    </button>
-                    <button onclick="showScreen('main')" class="bg-gray-600 hover:bg-gray-700 text-white font-black text-base sm:text-lg py-3 px-5 rounded-2xl shadow border-2 border-gray-400 transition flex items-center gap-2 active:scale-95">
-                        <i class="fa-solid fa-house"></i>
-                        <span>주제 변경</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Instruction Hint for Elderly Users -->
-            <div class="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-3 text-center text-emerald-900 font-bold text-lg sm:text-xl flex items-center justify-center gap-2">
-                <i class="fa-solid fa-lightbulb text-amber-500 text-2xl"></i>
-                <span>마우스 커서를 카드로 가져가서 마우스 왼쪽 버튼을 <strong class="text-orange-600">클릭</strong>하세요!</span>
-            </div>
-
-            <!-- Memory Cards Grid Area -->
-            <div id="cards-container" class="grid gap-4 sm:gap-6 justify-center items-center py-4">
-                <!-- Cards injected dynamically via JS -->
-            </div>
-        </section>
-
-    </main>
-
-    <!-- SCREEN 3: Victory / Praise Popup Modal -->
-    <div id="victory-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl border-8 border-amber-400 p-6 sm:p-10 max-w-2xl w-full text-center shadow-2xl transform transition-all scale-100 space-y-6">
-            <!-- Victory Icon / Badge -->
-            <div class="w-24 h-24 sm:w-32 sm:h-32 bg-amber-100 text-amber-500 border-4 border-amber-400 rounded-full flex items-center justify-center mx-auto shadow-inner text-5xl sm:text-7xl animate-bounce">
-                <i class="fa-solid fa-trophy"></i>
-            </div>
-
-            <!-- Praise Title -->
-            <div>
-                <h2 class="text-3xl sm:text-5xl font-black text-amber-900 mb-2" id="victory-praise-text">
-                    참 잘하셨어요! 🎉
-                </h2>
-                <p class="text-xl sm:text-2xl text-gray-700 font-bold">
-                    카드 짝을 모두 멋지게 찾으셨습니다!
-                </p>
-            </div>
-
-            <!-- Score Summary Card -->
-            <div class="bg-amber-50 rounded-2xl p-4 sm:p-6 border-2 border-amber-200 grid grid-cols-2 gap-4 text-center">
-                <div>
-                    <p class="text-gray-600 font-bold text-lg">총 클릭 횟수</p>
-                    <p class="text-3xl sm:text-4xl font-black text-orange-600" id="final-flips">0회</p>
-                </div>
-                <div>
-                    <p class="text-gray-600 font-bold text-lg">걸린 시간</p>
-                    <p class="text-3xl sm:text-4xl font-black text-emerald-600" id="final-time">0초</p>
-                </div>
-            </div>
-
-            <!-- Encouragement Message -->
-            <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
-                <p class="text-lg sm:text-xl text-emerald-900 font-bold" id="victory-sub-message">
-                    🧠 두뇌 회전력 상승! 손가락과 마우스 조작 감각이 더 나아지셨어요.
-                </p>
-            </div>
-
-            <!-- Large Action Buttons -->
-            <div class="flex flex-col sm:flex-row gap-4 justify-center pt-2">
-                <button id="next-level-btn" onclick="nextLevel()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xl sm:text-2xl py-4 px-6 rounded-2xl shadow-lg border-2 border-emerald-400 transition flex items-center justify-center gap-3 active:scale-95">
-                    <i class="fa-solid fa-circle-arrow-right"></i>
-                    <span>다음 단계 도전</span>
-                </button>
-                <button onclick="restartGame(); hideVictoryModal();" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black text-xl sm:text-2xl py-4 px-6 rounded-2xl shadow-lg border-2 border-amber-300 transition flex items-center justify-center gap-3 active:scale-95">
-                    <i class="fa-solid fa-rotate-right"></i>
-                    <span>한 번 더 하기</span>
-                </button>
-                <button onclick="showScreen('main'); hideVictoryModal();" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-black text-xl sm:text-2xl py-4 px-6 rounded-2xl shadow-lg border-2 border-gray-400 transition flex items-center justify-center gap-3 active:scale-95">
-                    <i class="fa-solid fa-grid-2"></i>
-                    <span>주제 고르기</span>
-                </button>
+            <div class="bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700 text-center">
+                <span class="text-[10px] text-slate-400 block">미션 완료</span>
+                <span id="score-display" class="text-sm font-bold text-emerald-400">0 / 3</span>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-amber-900 text-amber-100 py-4 px-4 text-center font-bold text-sm sm:text-base mt-8 border-t-4 border-amber-950">
-        <p>픽앤플레이 (Pick & Play) &copy; 어르신들의 건강한 디지털 적응과 행복한 뇌 운동을 응원합니다.</p>
-    </footer>
+    <!-- Main Game Container -->
+    <div class="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <!-- Canvas Game Area -->
+        <div class="lg:col-span-3 relative bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-700 flex justify-center items-center">
+            <canvas id="gameCanvas" class="w-full aspect-[4/3] bg-emerald-950 block"></canvas>
 
-    <script>
-        /* -------------------------------------------------------------
-           1. GAME DATA DEFINITIONS (Themes & Levels)
-           ------------------------------------------------------------- */
-        const THEMES = [
+            <!-- Quiz Modal -->
+            <div id="quiz-modal" class="absolute inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+                <div class="bg-slate-800 border-2 border-indigo-500 rounded-3xl p-6 max-w-md w-full shadow-2xl transform scale-95 transition-transform duration-300">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div id="quiz-icon" class="text-3xl text-amber-400">🚨</div>
+                        <h3 id="quiz-title" class="text-xl font-bold text-white">재난 안전 퀴즈</h3>
+                    </div>
+                    <p id="quiz-question" class="text-slate-300 text-base mb-6 bg-slate-900 p-4 rounded-xl border border-slate-700">퀴즈 내용이 여기에 표시됩니다.</p>
+                    <div id="quiz-options" class="flex flex-col gap-3">
+                        <!-- Options injected dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Victory / Message Modal -->
+            <div id="message-modal" class="absolute inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+                <div class="bg-slate-800 border-2 border-emerald-500 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+                    <div id="modal-icon" class="text-5xl mb-3">🎉</div>
+                    <h3 id="modal-title" class="text-2xl font-bold text-white mb-2">대피 성공!</h3>
+                    <p id="modal-desc" class="text-slate-300 text-sm mb-6">모든 위험 구역을 거쳐 안전하게 대피했습니다.</p>
+                    <button onclick="restartGame()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-95">
+                        다시 하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- QR Code Modal -->
+            <div id="qr-modal" class="absolute inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+                <div class="bg-slate-800 border-2 border-indigo-500 rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-qrcode text-indigo-400"></i> 스마트폰 접속 QR</h3>
+                        <button onclick="closeQRModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <p class="text-xs text-slate-300 mb-4">카메라 앱으로 QR을 스캔하면 스마트폰으로 바로 접속해 친구들과 함께 할 수 있어요!</p>
+                    <div id="qrcode-container" class="bg-white p-3 rounded-2xl inline-block shadow-inner mb-4 flex justify-center items-center"></div>
+                    <button onclick="closeQRModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all">
+                        확인
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multiplayer Chat & Profile Panel -->
+        <div class="bg-slate-800 rounded-3xl p-4 border border-slate-700 flex flex-col justify-between h-[450px] lg:h-auto shadow-xl">
+            <div>
+                <h3 class="text-sm font-bold text-indigo-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-comments"></i> 실시간 채팅 & 프로필
+                </h3>
+                <div class="mb-3 bg-slate-900 p-3 rounded-xl border border-slate-700 flex flex-col gap-2">
+                    <label class="text-[10px] text-slate-400">내 닉네임 및 아바타</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="nickname-input" class="bg-slate-800 border border-slate-600 rounded-lg px-2.5 py-1.5 text-xs w-full focus:outline-none focus:border-indigo-500" value="모험가" maxlength="8">
+                        <select id="avatar-select" class="bg-slate-800 border border-slate-600 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none">
+                            <option value="🐱">🐱 고양이</option>
+                            <option value="🐶">🐶 강아지</option>
+                            <option value="🦊">🦊 여우</option>
+                            <option value="🐼">🐼 판다</option>
+                            <option value="🤖">🤖 로봇</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Chat Log -->
+                <div id="chat-container" class="bg-slate-900 rounded-xl p-3 h-44 overflow-y-auto border border-slate-700 text-xs flex flex-col gap-1.5 mb-2">
+                    <div class="text-slate-500 italic text-center">채팅방에 입장했습니다.</div>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="flex gap-2">
+                <input type="text" id="chat-input" placeholder="메시지 입력..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs w-full focus:outline-none focus:border-indigo-500" onkeydown="if(event.key==='Enter') sendChatMessage()">
+                <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls Footer -->
+    <div class="w-full max-w-4xl mt-4 flex flex-col sm:flex-row justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700 gap-3">
+        <div class="text-xs text-slate-400 flex flex-col gap-1">
+            <span><strong class="text-white">이동 조작:</strong> PC는 방향키/WASD, 스마트폰은 아래 방향 버튼 사용</span>
+            <span><strong class="text-white">멀티플레이어:</strong> 스마트폰 카메라로 QR코드를 스캔하여 접속해 보세요!</span>
+        </div>
+        <!-- Mobile D-Pad Buttons -->
+        <div class="grid grid-cols-3 gap-1 w-36 h-24">
+            <div></div>
+            <button id="btn-up" class="bg-slate-700 active:bg-indigo-600 rounded-lg flex items-center justify-center text-white text-lg"><i class="fa-solid fa-arrow-up"></i></button>
+            <div></div>
+            <button id="btn-left" class="bg-slate-700 active:bg-indigo-600 rounded-lg flex items-center justify-center text-white text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+            <button id="btn-down" class="bg-slate-700 active:bg-indigo-600 rounded-lg flex items-center justify-center text-white text-lg"><i class="fa-solid fa-arrow-down"></i></button>
+            <button id="btn-right" class="bg-slate-700 active:bg-indigo-600 rounded-lg flex items-center justify-center text-white text-lg"><i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'zep-disaster-multi-demo';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: ""
+        };
+
+        let db, auth, userId;
+        let isFirebaseConnected = false;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 600;
+
+        let player = {
+            x: Math.random() * 400 + 200,
+            y: Math.random() * 200 + 400,
+            size: 32,
+            speed: 4,
+            emoji: '🐱',
+            name: '모험가'
+        };
+
+        let otherPlayers = {};
+        let activeQuiz = null;
+        let isGameOver = false;
+
+        const keys = {
+            ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,
+            KeyW: false, KeyS: false, KeyA: false, KeyD: false
+        };
+
+        const zones = [
             {
-                id: 'fruits',
-                name: '과일과 채소',
-                icon: 'fa-apple-whole',
-                color: 'from-red-500 to-amber-500',
-                items: [
-                    { id: 'apple', label: '사과', emoji: '🍎', color: 'bg-red-100 text-red-600' },
-                    { id: 'banana', label: '바나나', emoji: '🍌', color: 'bg-yellow-100 text-yellow-600' },
-                    { id: 'grape', label: '포도', emoji: '🍇', color: 'bg-purple-100 text-purple-600' },
-                    { id: 'strawberry', label: '딸기', emoji: '🍓', color: 'bg-rose-100 text-rose-600' },
-                    { id: 'watermelon', label: '수박', emoji: '🍉', color: 'bg-emerald-100 text-emerald-600' },
-                    { id: 'carrot', label: '당근', emoji: '🥕', color: 'bg-orange-100 text-orange-600' }
-                ]
+                id: 'science', name: '과학실 (화재 대피)', x: 50, y: 50, w: 180, h: 140, color: '#ef4444', icon: '🧪', completed: false,
+                quiz: { title: '과학실 화재 발생!', question: '과학실 실험 중 불이 났을 때 가장 먼저 해야 할 행동은?', options: [{ text: '1. "불이야!" 크게 외쳐 알린다.', correct: true }, { text: '2. 가방을 챙겨 도망친다.', correct: false }, { text: '3. 창문을 열고 숨는다.', correct: false }] }
             },
             {
-                id: 'animals',
-                name: '귀여운 동물',
-                icon: 'fa-paw',
-                color: 'from-amber-500 to-yellow-500',
-                items: [
-                    { id: 'dog', label: '강아지', emoji: '🐶', color: 'bg-amber-100 text-amber-700' },
-                    { id: 'cat', label: '고양이', emoji: '🐱', color: 'bg-orange-100 text-orange-600' },
-                    { id: 'rabbit', label: '토끼', emoji: '🐰', color: 'bg-pink-100 text-pink-600' },
-                    { id: 'panda', label: '판다', emoji: '🐼', color: 'bg-gray-100 text-gray-800' },
-                    { id: 'chick', label: '병아리', emoji: '🐥', color: 'bg-yellow-100 text-yellow-600' },
-                    { id: 'fox', label: '여우', emoji: '🦊', color: 'bg-orange-100 text-orange-700' }
-                ]
+                id: 'hallway', name: '복도 (지진 대피)', x: 310, y: 50, w: 180, h: 140, color: '#f59e0b', icon: '🏛️', completed: false,
+                quiz: { title: '지진 발생!', question: '건물 안에서 지진이 발생했을 때 올바른 대피 방법은?', options: [{ text: '1. 엘리베이터를 타고 내려간다.', correct: false }, { text: '2. 책상 아래로 들어가 몸을 보호한다.', correct: true }, { text: '3. 베란다에서 뛰어내린다.', correct: false }] }
             },
             {
-                id: 'memories',
-                name: '추억의 물건',
-                icon: 'fa-clock-rotate-left',
-                color: 'from-emerald-500 to-teal-500',
-                items: [
-                    { id: 'radio', label: '라디오', emoji: '📻', color: 'bg-amber-100 text-amber-800' },
-                    { id: 'bicycle', label: '자전거', emoji: '🚲', color: 'bg-blue-100 text-blue-600' },
-                    { id: 'tv', label: '텔레비전', emoji: '📺', color: 'bg-gray-100 text-gray-700' },
-                    { id: 'phone', label: '전화기', emoji: '☎️', color: 'bg-red-100 text-red-600' },
-                    { id: 'letter', label: '편지', emoji: '✉️', color: 'bg-amber-50 text-amber-700' },
-                    { id: 'kite', label: '방패연', emoji: '🪁', color: 'bg-sky-100 text-sky-600' }
-                ]
-            },
-            {
-                id: 'korean',
-                name: '전통 문화',
-                icon: 'fa-fan',
-                color: 'from-blue-500 to-indigo-500',
-                items: [
-                    { id: 'hanok', label: '기와집', emoji: '🏯', color: 'bg-stone-100 text-stone-700' },
-                    { id: 'drum', label: '장구', emoji: '🥁', color: 'bg-amber-100 text-amber-800' },
-                    { id: 'mask', label: '하회탈', emoji: '🎭', color: 'bg-orange-100 text-orange-800' },
-                    { id: 'pouch', label: '복주머니', emoji: '🌸', color: 'bg-pink-100 text-pink-600' },
-                    { id: 'rice', label: '돌솥밥', emoji: '🍚', color: 'bg-stone-100 text-stone-800' },
-                    { id: 'vase', label: '고려청자', emoji: '🍶', color: 'bg-emerald-100 text-emerald-800' }
-                ]
-            },
-            {
-                id: 'snacks',
-                name: '맛있는 간식',
-                icon: 'fa-cookie-bite',
-                color: 'from-pink-500 to-rose-500',
-                items: [
-                    { id: 'sweetpotato', label: '군고구마', emoji: '🍠', color: 'bg-purple-100 text-purple-800' },
-                    { id: 'fishbread', label: '붕어빵', emoji: '🐟', color: 'bg-amber-100 text-amber-700' },
-                    { id: 'ricecake', label: '경단 떡', emoji: '🍡', color: 'bg-rose-100 text-rose-600' },
-                    { id: 'corn', label: '옥수수', emoji: '🌽', color: 'bg-yellow-100 text-yellow-700' },
-                    { id: 'tangerine', label: '새콤 귤', emoji: '🍊', color: 'bg-orange-100 text-orange-600' },
-                    { id: 'tea', label: '따뜻한 차', emoji: '🍵', color: 'bg-emerald-100 text-emerald-700' }
-                ]
+                id: 'stairs', name: '계단 (이동 수칙)', x: 570, y: 50, w: 180, h: 140, color: '#3b82f6', icon: '🪜', completed: false,
+                quiz: { title: '계단 대피 수칙', question: '비상계단으로 대피할 때의 올바른 행동은?', options: [{ text: '1. 밀지 않고, 뛰지 않고, 조용히 내려간다.', correct: true }, { text: '2. 빨리 나가기 위해 앞사람을 민다.', correct: false }, { text: '3. 난간에 매달려 내려간다.', correct: false }] }
             }
         ];
 
-        const LEVELS = [
-            { id: 1, name: '1단계 (입문)', pairs: 2, totalCards: 4, desc: '카드 4장 (2쌍 맞추기)', gridCols: 'grid-cols-2 max-w-md' },
-            { id: 2, name: '2단계 (초급)', pairs: 3, totalCards: 6, desc: '카드 6장 (3쌍 맞추기)', gridCols: 'grid-cols-2 sm:grid-cols-3 max-w-xl' },
-            { id: 3, name: '3단계 (중급)', pairs: 4, totalCards: 8, desc: '카드 8장 (4쌍 맞추기)', gridCols: 'grid-cols-2 sm:grid-cols-4 max-w-3xl' },
-            { id: 4, name: '4단계 (상급)', pairs: 6, totalCards: 12, desc: '카드 12장 (6쌍 맞추기)', gridCols: 'grid-cols-3 sm:grid-cols-4 max-w-4xl' }
+        const safeZone = { name: '운동장 (안전지대)', x: 250, y: 400, w: 300, h: 150, color: '#10b981', icon: '⚽' };
+        const walls = [
+            { x: 0, y: 0, w: 800, h: 20 }, { x: 0, y: 0, w: 20, h: 600 }, { x: 780, y: 0, w: 20, h: 600 }, { x: 0, y: 580, w: 800, h: 20 },
+            { x: 250, y: 220, w: 300, h: 30 }, { x: 250, y: 350, w: 300, h: 20 }
         ];
 
-        /* -------------------------------------------------------------
-           2. APP STATE VARIABLES
-           ------------------------------------------------------------- */
-        let currentTheme = THEMES[0];
-        let currentLevel = LEVELS[0];
-        let cards = [];
-        let flippedCards = [];
-        let matchedPairs = 0;
-        let flipCount = 0;
-        let timerSeconds = 0;
-        let timerInterval = null;
-        let isLockBoard = false;
-
-        // Settings Toggles
-        let isSoundEnabled = true;
-        let isTTSEnabled = true;
-        let isMouseGuideActive = false;
-
-        /* -------------------------------------------------------------
-           3. AUDIO SYNTHESIZER (Web Audio API - No external files needed)
-           ------------------------------------------------------------- */
-        let audioCtx = null;
-
-        function getAudioContext() {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContext();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            return audioCtx;
-        }
-
-        function playSound(type) {
-            if (!isSoundEnabled) return;
+        async function initFirebase() {
             try {
-                const ctx = getAudioContext();
-                const now = ctx.currentTime;
+                if (firebaseConfig.projectId) {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    userId = auth.currentUser?.uid || crypto.randomUUID();
+                    isFirebaseConnected = true;
 
-                if (type === 'flip') {
-                    // Soft crisp flip sound
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(400, now);
-                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start(now);
-                    osc.stop(now + 0.08);
-                } else if (type === 'match') {
-                    // Cheerful ascending chime (C5, E5, G5)
-                    const notes = [523.25, 659.25, 783.99];
-                    notes.forEach((freq, idx) => {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.type = 'triangle';
-                        osc.frequency.setValueAtTime(freq, now + idx * 0.09);
-                        gain.gain.setValueAtTime(0.2, now + idx * 0.09);
-                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.25);
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.start(now + idx * 0.09);
-                        osc.stop(now + idx * 0.09 + 0.25);
-                    });
-                } else if (type === 'mismatch') {
-                    // Low gentle thud
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(220, now);
-                    osc.frequency.exponentialRampToValueAtTime(140, now + 0.15);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start(now);
-                    osc.stop(now + 0.15);
-                } else if (type === 'win') {
-                    // Fanfare melody
-                    const fanfare = [
-                        { f: 523.25, t: 0.0 },  // C5
-                        { f: 659.25, t: 0.15 }, // E5
-                        { f: 783.99, t: 0.30 }, // G5
-                        { f: 1046.50, t: 0.45 } // C6
-                    ];
-                    fanfare.forEach(note => {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(note.f, now + note.t);
-                        gain.gain.setValueAtTime(0.25, now + note.t);
-                        gain.gain.exponentialRampToValueAtTime(0.001, now + note.t + 0.4);
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.start(now + note.t);
-                        osc.stop(now + note.t + 0.4);
-                    });
+                    setupRealtimeSync();
+                } else {
+                    userId = 'local-user-' + Math.floor(Math.random() * 1000);
+                    isFirebaseConnected = false;
                 }
             } catch (e) {
-                console.log("Audio playback error:", e);
+                console.warn('Firebase init fallback to local mode:', e);
+                userId = 'local-user-' + Math.floor(Math.random() * 1000);
             }
         }
 
-        /* -------------------------------------------------------------
-           4. VOICE NARRATION (Web Speech API TTS in Korean)
-           ------------------------------------------------------------- */
-        function speakKorean(text) {
-            if (!isTTSEnabled || !('speechSynthesis' in window)) return;
-            try {
-                window.speechSynthesis.cancel(); // Stop previous voice
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'ko-KR';
-                utterance.rate = 0.9; // Slightly slower speed for seniors
-                utterance.pitch = 1.0;
-                window.speechSynthesis.speak(utterance);
-            } catch (e) {
-                console.log("TTS error:", e);
-            }
-        }
+        function setupRealtimeSync() {
+            if (!isFirebaseConnected) return;
 
-        /* -------------------------------------------------------------
-           5. MOUSE GUIDE TRAIL HELPER
-           ------------------------------------------------------------- */
-        const mouseGuide = document.getElementById('mouse-guide');
-
-        window.addEventListener('mousemove', (e) => {
-            if (isMouseGuideActive) {
-                mouseGuide.style.left = e.clientX + 'px';
-                mouseGuide.style.top = e.clientY + 'px';
-            }
-        });
-
-        function toggleMouseGuide() {
-            isMouseGuideActive = !isMouseGuideActive;
-            const btn = document.getElementById('toggle-mouse-guide-btn');
-            if (isMouseGuideActive) {
-                mouseGuide.style.display = 'block';
-                btn.classList.add('bg-amber-600', 'border-yellow-300');
-                speakKorean('마우스 위치 표시를 켰습니다');
-            } else {
-                mouseGuide.style.display = 'none';
-                btn.classList.remove('bg-amber-600', 'border-yellow-300');
-                speakKorean('마우스 위치 표시를 껐습니다');
-            }
-        }
-
-        function toggleSound() {
-            isSoundEnabled = !isSoundEnabled;
-            const icon = document.getElementById('sound-icon');
-            const text = document.getElementById('sound-text');
-            if (isSoundEnabled) {
-                icon.className = 'fa-solid fa-volume-high text-amber-300';
-                text.innerText = '소리 켜짐';
-                playSound('flip');
-            } else {
-                icon.className = 'fa-solid fa-volume-xmark text-gray-300';
-                text.innerText = '소리 끔';
-            }
-        }
-
-        function toggleTTS() {
-            isTTSEnabled = !isTTSEnabled;
-            const icon = document.getElementById('tts-icon');
-            const text = document.getElementById('tts-text');
-            if (isTTSEnabled) {
-                icon.className = 'fa-solid fa-comment-dots text-amber-300';
-                text.innerText = '음성 도우미 켜짐';
-                speakKorean('음성 안내 도우미를 켰습니다');
-            } else {
-                icon.className = 'fa-solid fa-comment-slash text-gray-300';
-                text.innerText = '음성 도우미 끔';
-            }
-        }
-
-        /* -------------------------------------------------------------
-           6. MAIN SCREEN RENDERERS
-           ------------------------------------------------------------- */
-        function renderMainScreen() {
-            // Render Themes
-            const themeGrid = document.getElementById('theme-grid');
-            themeGrid.innerHTML = THEMES.map(theme => {
-                const isSelected = theme.id === currentTheme.id;
-                return `
-                    <button onclick="selectTheme('${theme.id}')" 
-                        class="p-5 rounded-2xl border-4 text-left transition-all transform hover:scale-102 flex items-center gap-4 ${
-                            isSelected 
-                                ? 'bg-orange-50 border-orange-500 ring-4 ring-orange-200 shadow-lg' 
-                                : 'bg-gray-50 border-gray-200 hover:border-orange-300 hover:bg-orange-50/50'
-                        }">
-                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br ${theme.color} text-white flex items-center justify-center text-3xl shadow">
-                            <i class="fa-solid ${theme.icon}"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center justify-between">
-                                <h4 class="text-2xl font-black text-gray-800">${theme.name}</h4>
-                                ${isSelected ? '<i class="fa-solid fa-circle-check text-orange-500 text-2xl"></i>' : ''}
-                            </div>
-                            <p class="text-sm font-bold text-gray-500 mt-1">${theme.items.map(i => i.label).slice(0, 3).join(', ')} 등</p>
-                        </div>
-                    </button>
-                `;
-            }).join('');
-
-            // Render Levels
-            const levelGrid = document.getElementById('level-grid');
-            levelGrid.innerHTML = LEVELS.map(level => {
-                const isSelected = level.id === currentLevel.id;
-                return `
-                    <button onclick="selectLevel(${level.id})" 
-                        class="p-5 rounded-2xl border-4 text-left transition-all transform hover:scale-102 flex flex-col justify-between ${
-                            isSelected 
-                                ? 'bg-emerald-50 border-emerald-500 ring-4 ring-emerald-200 shadow-lg' 
-                                : 'bg-gray-50 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50'
-                        }">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xl font-black text-gray-800">${level.name}</span>
-                            ${isSelected ? '<i class="fa-solid fa-circle-check text-emerald-600 text-2xl"></i>' : ''}
-                        </div>
-                        <p class="text-base font-bold text-emerald-700">${level.desc}</p>
-                    </button>
-                `;
-            }).join('');
-        }
-
-        function selectTheme(themeId) {
-            currentTheme = THEMES.find(t => t.id === themeId);
-            renderMainScreen();
-            playSound('flip');
-            speakKorean(`${currentTheme.name} 주제 선택`);
-        }
-
-        function selectLevel(levelId) {
-            currentLevel = LEVELS.find(l => l.id === levelId);
-            renderMainScreen();
-            playSound('flip');
-            speakKorean(`${currentLevel.name} 선택`);
-        }
-
-        function showScreen(screenName) {
-            document.getElementById('screen-main').classList.add('hidden');
-            document.getElementById('screen-game').classList.add('hidden');
-
-            if (screenName === 'main') {
-                document.getElementById('screen-main').classList.remove('hidden');
-                stopTimer();
-                renderMainScreen();
-            } else if (screenName === 'game') {
-                document.getElementById('screen-game').classList.remove('hidden');
-            }
-        }
-
-        /* -------------------------------------------------------------
-           7. GAME LOGIC ENGINE
-           ------------------------------------------------------------- */
-        function startGame() {
-            showScreen('game');
-            
-            // Update Badges
-            document.getElementById('active-theme-badge').innerText = currentTheme.name;
-            document.getElementById('active-level-badge').innerText = currentLevel.name;
-
-            // Reset Game Stats
-            flipCount = 0;
-            matchedPairs = 0;
-            document.getElementById('flip-count').innerText = flipCount;
-            
-            startTimer();
-
-            // Select Theme Items for current level pairs
-            const selectedItems = currentTheme.items.slice(0, currentLevel.pairs);
-            
-            // Duplicate pairs to create matching deck
-            const deck = [...selectedItems, ...selectedItems];
-            
-            // Shuffle Deck (Fisher-Yates)
-            for (let i = deck.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [deck[i], deck[j]] = [deck[j], deck[i]];
-            }
-
-            // Generate Cards Array with uniquely assigned runtime IDs
-            cards = deck.map((item, index) => ({
-                uniqueId: index,
-                itemId: item.id,
-                label: item.label,
-                emoji: item.emoji,
-                color: item.color,
-                isFlipped: false,
-                isMatched: false
-            }));
-
-            flippedCards = [];
-            isLockBoard = false;
-
-            renderGameBoard();
-            speakKorean(`${currentTheme.name} ${currentLevel.name} 게임을 시작합니다.`);
-        }
-
-        function restartGame() {
-            startGame();
-        }
-
-        function startTimer() {
-            stopTimer();
-            timerSeconds = 0;
-            document.getElementById('game-timer').innerText = timerSeconds;
-            timerInterval = setInterval(() => {
-                timerSeconds++;
-                document.getElementById('game-timer').innerText = timerSeconds;
-            }, 1000);
-        }
-
-        function stopTimer() {
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
-        }
-
-        function renderGameBoard() {
-            const container = document.getElementById('cards-container');
-            container.className = `grid gap-4 sm:gap-6 justify-center items-center py-4 mx-auto ${currentLevel.gridCols}`;
-            
-            container.innerHTML = cards.map(card => {
-                return `
-                    <div class="card perspective-1000 h-36 sm:h-48 w-28 sm:w-36 cursor-pointer card-hover-effect transition-transform duration-200 ${card.isFlipped ? 'flipped' : ''}"
-                         onclick="onCardClick(${card.uniqueId})">
-                        <div class="card-inner">
-                            <!-- Card Front (Hidden pattern) -->
-                            <div class="card-front bg-gradient-to-br from-amber-400 to-orange-500 border-4 border-amber-200 text-white font-black rounded-2xl flex flex-col items-center justify-center p-2 shadow-lg">
-                                <i class="fa-solid fa-star text-3xl sm:text-4xl text-amber-100 mb-1 opacity-80"></i>
-                                <span class="text-xs sm:text-sm tracking-widest text-amber-100 font-bold">클릭하세요</span>
-                            </div>
-                            <!-- Card Back (Revealed content) -->
-                            <div class="card-back border-4 border-orange-400 rounded-2xl ${card.color} flex flex-col items-center justify-center p-2 shadow-xl ${card.isMatched ? 'ring-4 ring-emerald-400 bg-emerald-50' : ''}">
-                                <span class="text-4xl sm:text-6xl mb-2 filter drop-shadow">${card.emoji}</span>
-                                <span class="text-lg sm:text-2xl font-black text-gray-800">${card.label}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function onCardClick(uniqueId) {
-            if (isLockBoard) return;
-            
-            const card = cards.find(c => c.uniqueId === uniqueId);
-            
-            // Prevent clicking already flipped or matched cards
-            if (!card || card.isFlipped || card.isMatched) return;
-
-            // Flip Card
-            card.isFlipped = true;
-            flippedCards.push(card);
-            playSound('flip');
-            renderGameBoard();
-
-            // TTS Read label
-            speakKorean(card.label);
-
-            if (flippedCards.length === 2) {
-                flipCount++;
-                document.getElementById('flip-count').innerText = flipCount;
-                checkMatch();
-            }
-        }
-
-        function checkMatch() {
-            isLockBoard = true;
-            const [card1, card2] = flippedCards;
-
-            if (card1.itemId === card2.itemId) {
-                // Match Found!
-                card1.isMatched = true;
-                card2.isMatched = true;
-                matchedPairs++;
-                
-                setTimeout(() => {
-                    playSound('match');
-                    speakKorean(`맞았습니다! ${card1.label}`);
-                    flippedCards = [];
-                    isLockBoard = false;
-                    renderGameBoard();
-
-                    // Check for Game Completion
-                    if (matchedPairs === currentLevel.pairs) {
-                        setTimeout(handleVictory, 600);
+            const playersCol = collection(db, 'artifacts', appId, 'public', 'data', 'multi_players');
+            onSnapshot(playersCol, (snapshot) => {
+                let count = 0;
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (docSnap.id !== userId) {
+                        otherPlayers[docSnap.id] = data;
                     }
-                }, 400);
-
-            } else {
-                // Mismatch
-                setTimeout(() => {
-                    playSound('mismatch');
-                    card1.isFlipped = false;
-                    card2.isFlipped = false;
-                    flippedCards = [];
-                    isLockBoard = false;
-                    renderGameBoard();
-                }, 1200);
-            }
-        }
-
-        /* -------------------------------------------------------------
-           8. VICTORY & PRAISE CELEBRATION
-           ------------------------------------------------------------- */
-        function handleVictory() {
-            stopTimer();
-            playSound('win');
-
-            // Praise messages randomly chosen for warmth and encouragement
-            const praiseMessages = [
-                "참 잘하셨어요! 훌륭합니다!",
-                "대단한 기억력이세요! 원더풀!",
-                "마우스 조작 실력이 쑥쑥 늘고 계십니다!",
-                "완벽하게 짝을 모두 찾으셨습니다!",
-                "최고입니다! 두뇌 건강 최고!"
-            ];
-            const randomPraise = praiseMessages[Math.floor(Math.random() * praiseMessages.length)];
-
-            document.getElementById('victory-praise-text').innerText = randomPraise;
-            document.getElementById('final-flips').innerText = `${flipCount}회`;
-            document.getElementById('final-time').innerText = `${timerSeconds}초`;
-
-            // Voice Praise
-            speakKorean(`${randomPraise} ${flipCount}회 만에 카드를 모두 맞추셨습니다.`);
-
-            // Trigger Confetti Animation
-            if (typeof confetti === 'function') {
-                confetti({
-                    particleCount: 120,
-                    spread: 80,
-                    origin: { y: 0.6 }
+                    count++;
                 });
-            }
+                document.getElementById('player-count-display').innerText = `${count}명`;
+            }, (err) => console.error(err));
 
-            // Configure Next Level Button Visibility
-            const nextBtn = document.getElementById('next-level-btn');
-            if (currentLevel.id < LEVELS.length) {
-                nextBtn.classList.remove('hidden');
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'multi_chats');
+            onSnapshot(chatCol, (snapshot) => {
+                const chatContainer = document.getElementById('chat-container');
+                let chats = [];
+                snapshot.forEach(docSnap => chats.push(docSnap.data()));
+                chats.sort((a, b) => a.time - b.time);
+                
+                chatContainer.innerHTML = '';
+                chats.slice(-30).forEach(c => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `<strong class="text-indigo-300">${c.name}:</strong> <span class="text-white">${c.message}</span>`;
+                    chatContainer.appendChild(div);
+                });
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, (err) => console.error(err));
+        }
+
+        async function updateMyPositionToServer() {
+            if (!isFirebaseConnected || !userId) return;
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'multi_players', userId);
+            await setDoc(docRef, {
+                x: player.x,
+                y: player.y,
+                emoji: player.emoji,
+                name: player.name,
+                lastUpdated: Date.now()
+            }, { merge: true });
+        }
+
+        window.sendChatMessage = async function() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const nick = document.getElementById('nickname-input').value.trim() || '모험가';
+            player.name = nick;
+
+            if (isFirebaseConnected) {
+                const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'multi_chats');
+                await addDoc(chatCol, {
+                    name: nick,
+                    message: text,
+                    time: Date.now()
+                });
             } else {
-                nextBtn.classList.add('hidden'); // Reached max level
+                const chatContainer = document.getElementById('chat-container');
+                const div = document.createElement('div');
+                div.innerHTML = `<strong class="text-indigo-300">${nick}:</strong> <span class="text-white">${text}</span>`;
+                chatContainer.appendChild(div);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
-
-            // Display Modal
-            document.getElementById('victory-modal').classList.remove('hidden');
+            input.value = '';
         }
 
-        function hideVictoryModal() {
-            document.getElementById('victory-modal').classList.add('hidden');
-        }
-
-        function nextLevel() {
-            hideVictoryModal();
-            if (currentLevel.id < LEVELS.length) {
-                currentLevel = LEVELS.find(l => l.id === currentLevel.id + 1);
-                startGame();
-            }
-        }
-
-        /* -------------------------------------------------------------
-           9. INITIALIZATION ON WINDOW LOAD
-           ------------------------------------------------------------- */
-        window.onload = function () {
-            renderMainScreen();
+        window.openQRModal = function() {
+            const modal = document.getElementById('qr-modal');
+            const container = document.getElementById('qrcode-container');
+            container.innerHTML = '';
             
-            // Enable Web Audio activation on first user click anywhere
-            window.addEventListener('click', () => {
-                getAudioContext();
-            }, { once: true });
+            // Generate QR Code for current page URL
+            try {
+                const typeNumber = 4;
+                const errorCorrectionLevel = 'M';
+                const qr = qrcode(typeNumber, errorCorrectionLevel);
+                qr.addData(window.location.href);
+                qr.make();
+                container.innerHTML = qr.createSvgTag({cellSize: 4, margin: 2});
+            } catch (err) {
+                container.innerHTML = `<span class="text-xs text-red-500">QR 생성 실패</span>`;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        window.closeQRModal = function() {
+            document.getElementById('qr-modal').classList.add('hidden');
+        }
+
+        window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.code)) keys[e.code] = true; });
+        window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.code)) keys[e.code] = false; });
+
+        function bindTouchButton(id, code) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[code] = true; });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); keys[code] = false; });
+            el.addEventListener('mousedown', () => { keys[code] = true; });
+            el.addEventListener('mouseup', () => { keys[code] = false; });
+        }
+        bindTouchButton('btn-up', 'ArrowUp');
+        bindTouchButton('btn-down', 'ArrowDown');
+        bindTouchButton('btn-left', 'ArrowLeft');
+        bindTouchButton('btn-right', 'ArrowRight');
+
+        function checkRectCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.w && rect1.x + rect1.w > rect2.x &&
+                   rect1.y < rect2.y + rect2.h && rect1.y + rect1.h > rect2.y;
+        }
+
+        let syncTimer = 0;
+        function update() {
+            if (activeQuiz || isGameOver) return;
+
+            player.emoji = document.getElementById('avatar-select').value;
+            player.name = document.getElementById('nickname-input').value.trim() || '모험가';
+
+            let dx = 0, dy = 0;
+            if (keys.ArrowUp || keys.KeyW) dy -= player.speed;
+            if (keys.ArrowDown || keys.KeyS) dy += player.speed;
+            if (keys.ArrowLeft || keys.KeyA) dx -= player.speed;
+            if (keys.ArrowRight || keys.KeyD) dx += player.speed;
+
+            player.x += dx;
+            let playerRect = { x: player.x, y: player.y, w: player.size, h: player.size };
+            for (let wall of walls) {
+                if (checkRectCollision(playerRect, wall)) { player.x -= dx; break; }
+            }
+
+            player.y += dy;
+            playerRect = { x: player.x, y: player.y, w: player.size, h: player.size };
+            for (let wall of walls) {
+                if (checkRectCollision(playerRect, wall)) { player.y -= dy; break; }
+            }
+
+            syncTimer++;
+            if (syncTimer > 6) {
+                updateMyPositionToServer();
+                syncTimer = 0;
+            }
+
+            for (let zone of zones) {
+                if (!zone.completed && checkRectCollision(playerRect, zone)) {
+                    triggerQuiz(zone);
+                    break;
+                }
+            }
+
+            let completedCount = zones.filter(z => z.completed).length;
+            const statusEl = document.getElementById('status-display');
+            if (checkRectCollision(playerRect, safeZone)) {
+                if (completedCount === zones.length) {
+                    triggerVictory();
+                } else {
+                    if (statusEl) statusEl.innerText = `미션 ${completedCount}/3 남음!`;
+                }
+            } else {
+                if (statusEl) statusEl.innerText = completedCount === 3 ? '운동장으로 대피하세요!' : '위험 구역 탐색 중...';
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            zones.forEach(zone => {
+                ctx.fillStyle = zone.completed ? '#065f46' : zone.color;
+                ctx.globalAlpha = zone.completed ? 0.4 : 0.25;
+                ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+                ctx.strokeStyle = zone.completed ? '#10b981' : zone.color;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(zone.x, zone.y, zone.w, zone.h);
+
+                ctx.globalAlpha = 1.0;
+                ctx.font = '20px sans-serif';
+                ctx.fillText(zone.icon, zone.x + 15, zone.y + 35);
+                ctx.font = '14px Jua';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(zone.name, zone.x + 45, zone.y + 30);
+                
+                ctx.fillStyle = zone.completed ? '#34d399' : '#f87171';
+                ctx.font = '12px Jua';
+                ctx.fillText(zone.completed ? '✔ 완료됨' : '⚡ 미션 구역', zone.x + 15, zone.y + 60);
+            });
+
+            ctx.fillStyle = '#047857';
+            ctx.globalAlpha = 0.35;
+            ctx.fillRect(safeZone.x, safeZone.y, safeZone.w, safeZone.h);
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([6, 6]);
+            ctx.strokeRect(safeZone.x, safeZone.y, safeZone.w, safeZone.h);
+            ctx.setLineDash([]);
+
+            ctx.globalAlpha = 1.0;
+            ctx.font = '24px sans-serif';
+            ctx.fillText(safeZone.icon, safeZone.x + 15, safeZone.y + 35);
+            ctx.font = '16px Jua';
+            ctx.fillStyle = '#6ee7b7';
+            ctx.fillText(safeZone.name, safeZone.x + 50, safeZone.y + 32);
+
+            ctx.fillStyle = '#475569';
+            walls.forEach(wall => ctx.fillRect(wall.x, wall.y, wall.w, wall.h));
+
+            for (let id in otherPlayers) {
+                let p = otherPlayers[id];
+                ctx.font = '28px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.emoji || '🐱', p.x + 16, p.y + 16);
+                
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(p.x - 10, p.y - 18, 52, 18);
+                ctx.fillStyle = '#93c5fd';
+                ctx.font = '11px Jua';
+                ctx.fillText(p.name || '친구', p.x + 16, p.y - 9);
+            }
+
+            ctx.font = '28px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(player.emoji, player.x + player.size / 2, player.y + player.size / 2);
+
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(player.x - 10, player.y - 18, 52, 18);
+            ctx.fillStyle = '#34d399';
+            ctx.font = '11px Jua';
+            ctx.fillText(player.name, player.x + 16, player.y - 9);
+
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        function triggerQuiz(zone) {
+            activeQuiz = zone;
+            const modal = document.getElementById('quiz-modal');
+            document.getElementById('quiz-title').innerText = zone.quiz.title;
+            document.getElementById('quiz-question').innerText = zone.quiz.question;
+            
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+
+            zone.quiz.options.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-3 rounded-xl bg-slate-700 hover:bg-indigo-600 text-white font-medium transition-all border border-slate-600';
+                btn.innerText = opt.text;
+                btn.onclick = () => handleAnswer(zone, opt.correct);
+                optionsContainer.appendChild(btn);
+            });
+            modal.classList.remove('hidden');
+        }
+
+        function handleAnswer(zone, isCorrect) {
+            const modal = document.getElementById('quiz-modal');
+            if (isCorrect) {
+                zone.completed = true;
+                modal.classList.add('hidden');
+                activeQuiz = null;
+                updateScoreBoard();
+                player.y += 40;
+            } else {
+                // Custom non-blocking message instead of alert()
+                const originalQ = document.getElementById('quiz-question').innerText;
+                document.getElementById('quiz-question').innerText = '❌ 오답입니다! 다시 선택해주세요.';
+                setTimeout(() => { document.getElementById('quiz-question').innerText = originalQ; }, 1500);
+            }
+        }
+
+        function updateScoreBoard() {
+            const completedCount = zones.filter(z => z.completed).length;
+            document.getElementById('score-display').innerText = `${completedCount} / 3`;
+        }
+
+        function triggerVictory() {
+            isGameOver = true;
+            const modal = document.getElementById('message-modal');
+            document.getElementById('modal-icon').innerText = '🏆';
+            document.getElementById('modal-title').innerText = '대피 성공!';
+            document.getElementById('modal-desc').innerText = '모든 미션을 완수하고 안전하게 운동장에 도착했습니다!';
+            modal.classList.remove('hidden');
+        }
+
+        window.restartGame = function() {
+            player.x = 100;
+            player.y = 500;
+            zones.forEach(z => z.completed = false);
+            isGameOver = false;
+            activeQuiz = null;
+            document.getElementById('message-modal').classList.add('hidden');
+            updateScoreBoard();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = async () => {
+            await initFirebase();
+            updateScoreBoard();
+            gameLoop();
         };
     </script>
 </body>
